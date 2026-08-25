@@ -76,23 +76,7 @@ export default function EmpresasPage() {
     setCarregando(false);
   }
 
-  function abrirEdicao(emp: Empresa) {  async function buscarCep(cep: string) {
-    const soNumeros = cep.replace(/\D/g, "");
-    if (soNumeros.length !== 8) return;
-
-    setMensagem(null);
-    const resposta = await fetch(`https://viacep.com.br/ws/${soNumeros}/json/`);
-    const dados = await resposta.json();
-
-    if (dados.erro) {
-      setMensagem({ tipo: "erro", texto: "CEP não encontrado. Preencha o endereço manualmente." });
-      return;
-    }
-
-    const enderecoCompleto = `${dados.logradouro}, ${dados.bairro}, ${dados.localidade}/${dados.uf}`;
-    atualizar("endereco", enderecoCompleto);
-    setMensagem({ tipo: "sucesso", texto: "Endereço preenchido pelo CEP. Confira e adicione o número." });
-  }
+  function abrirEdicao(emp: Empresa) {
     setEditando(emp);
     setForm({
       nome: emp.nome ?? "",
@@ -110,6 +94,24 @@ export default function EmpresasPage() {
     });
     setMensagem(null);
     setModalAberto(true);
+  }
+
+  async function buscarCep(cep: string) {
+    const soNumeros = cep.replace(/\D/g, "");
+    if (soNumeros.length !== 8) return;
+
+    setMensagem(null);
+    const resposta = await fetch(`https://viacep.com.br/ws/${soNumeros}/json/`);
+    const dados = await resposta.json();
+
+    if (dados.erro) {
+      setMensagem({ tipo: "erro", texto: "CEP não encontrado. Preencha o endereço manualmente." });
+      return;
+    }
+
+    const enderecoCompleto = `${dados.logradouro}, ${dados.bairro}, ${dados.localidade}/${dados.uf}`;
+    atualizar("endereco", enderecoCompleto);
+    setMensagem({ tipo: "sucesso", texto: "Endereço preenchido pelo CEP. Confira e adicione o número." });
   }
 
   function atualizar(campo: string, valor: string) {
@@ -260,7 +262,7 @@ export default function EmpresasPage() {
                 {campo("CPF", "cpf", "000.000.000-00")}
                 {campo("Código", "codigo", "Código da empresa")}
                 {campo("Inscrição estadual", "inscricao_estadual", "Inscrição estadual")}
-                                <div>
+                <div>
                   <label className="block text-sm font-medium text-slate-600 mb-1">CEP</label>
                   <input
                     type="text"
