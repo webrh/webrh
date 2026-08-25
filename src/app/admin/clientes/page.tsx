@@ -88,7 +88,24 @@ export default function AdminClientesPage() {
     setForm((prev) => ({ ...prev, [campo]: valor }));
   }
 
-  function abrirModal() {  async function buscarCep(cep: string) {
+  function abrirModal() { 
+  async function buscarCep(cep: string) {
+    const soNumeros = cep.replace(/\D/g, "");
+    if (soNumeros.length !== 8) return;
+
+    setMensagem(null);
+    const resposta = await fetch(`https://viacep.com.br/ws/${soNumeros}/json/`);
+    const dados = await resposta.json();
+
+    if (dados.erro) {
+      setMensagem({ tipo: "erro", texto: "CEP não encontrado. Preencha o endereço manualmente." });
+      return;
+    }
+
+    const enderecoCompleto = `${dados.logradouro}, ${dados.bairro}, ${dados.localidade}/${dados.uf}`;
+    atualizar("endereco", enderecoCompleto);
+    setMensagem({ tipo: "sucesso", texto: "Endereço preenchido pelo CEP. Confira e adicione o número." });
+  } async function buscarCep(cep: string) {
     const soNumeros = cep.replace(/\D/g, "");
     if (soNumeros.length !== 8) return;
 
