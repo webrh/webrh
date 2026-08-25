@@ -154,7 +154,7 @@ export default function EmpresasPage() {
     carregarEmpresas();
   }
 
-  const campo = (label: string, chave: string, placeholder = "", tipo = "text") => (
+ const campo = (label: string, chave: string, placeholder = "", tipo = "text") => (
     <div>
       <label className="block text-sm font-medium text-slate-600 mb-1">{label}</label>
       <input
