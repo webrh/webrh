@@ -35,8 +35,7 @@ export default function DashboardPage() {
   const [pendencias, setPendencias] = useState<Pendencia[]>([]);
 
   useEffect(() => {
-    async function carregarDados() {
-      const { count: totalFunc } = await supabase
+    async function carregarDados() {      const { count: totalFunc } = await supabase
         .from("funcionarios")
         .select("*", { count: "exact", head: true })
         .eq("ativo", true);
@@ -137,62 +136,3 @@ export default function DashboardPage() {
 
     carregarDados();
   }, []);
-
-  const cards = [
-    { titulo: "Funcionários", valor: funcionarios === null ? "-" : String(funcionarios) },
-    { titulo: "Marcações de hoje", valor: marcacoesHoje === null ? "-" : String(marcacoesHoje) },
-    { titulo: "Banco de horas", valor: bancoHoras === null ? "-" : `${bancoHoras} min` },
-    { titulo: "Índice de absenteísmo", valor: absenteismo === null ? "-" : `${absenteismo}%` },
-    { titulo: "Turnover", valor: turnover === null ? "-" : `${turnover}%` },
-  ];
-
-  return (
-    <div className="flex min-h-screen bg-slate-50">
-      <Sidebar />
-      <main className="flex-1 p-8">
-        <h1 className="text-2xl font-bold text-slate-800 mb-6">Dashboard</h1>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {cards.map((card) => (
-            <div key={card.titulo} className="bg-white rounded-2xl shadow p-6">
-              <p className="text-sm text-slate-500">{card.titulo}</p>
-              <p className="text-3xl font-bold text-slate-800 mt-2">{card.valor}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-8 bg-white rounded-2xl shadow p-6">
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">
-            Funcionários com pendências de ponto hoje
-          </h2>
-
-          {pendencias.length === 0 ? (
-            <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-              ✅ Todos os funcionários completaram as {BATIDAS_MINIMAS} batidas de hoje.
-            </p>
-          ) : (
-            <ul className="space-y-3">
-              {pendencias.map((p) => (
-                <li
-                  key={p.id}
-                  className="flex items-center justify-between border-b border-slate-100 pb-3 last:border-0"
-                >
-                  <span className="font-medium text-slate-800">{p.nome}</span>
-                  <span
-                    className={`text-sm rounded-full px-3 py-1 font-medium ${
-                      p.batidas === 0
-                        ? "bg-red-50 text-red-700"
-                        : "bg-amber-50 text-amber-700"
-                    }`}
-                  >
-                    {p.status}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </main>
-    </div>
-  );
-}
