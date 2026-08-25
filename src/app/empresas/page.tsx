@@ -76,7 +76,23 @@ export default function EmpresasPage() {
     setCarregando(false);
   }
 
-  function abrirEdicao(emp: Empresa) {
+  function abrirEdicao(emp: Empresa) {  async function buscarCep(cep: string) {
+    const soNumeros = cep.replace(/\D/g, "");
+    if (soNumeros.length !== 8) return;
+
+    setMensagem(null);
+    const resposta = await fetch(`https://viacep.com.br/ws/${soNumeros}/json/`);
+    const dados = await resposta.json();
+
+    if (dados.erro) {
+      setMensagem({ tipo: "erro", texto: "CEP não encontrado. Preencha o endereço manualmente." });
+      return;
+    }
+
+    const enderecoCompleto = `${dados.logradouro}, ${dados.bairro}, ${dados.localidade}/${dados.uf}`;
+    atualizar("endereco", enderecoCompleto);
+    setMensagem({ tipo: "sucesso", texto: "Endereço preenchido pelo CEP. Confira e adicione o número." });
+  }
     setEditando(emp);
     setForm({
       nome: emp.nome ?? "",
@@ -244,7 +260,20 @@ export default function EmpresasPage() {
                 {campo("CPF", "cpf", "000.000.000-00")}
                 {campo("Código", "codigo", "Código da empresa")}
                 {campo("Inscrição estadual", "inscricao_estadual", "Inscrição estadual")}
-                {campo("CEP", "cep", "00000-000")}
+                                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1">CEP</label>
+                  <input
+                    type="text"
+                    placeholder="00000-000"
+                    value={form.cep}
+                    onChange={(e) => atualizar("cep", e.target.value)}
+                    onBlur={(e) => buscarCep(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 outline-none focus:border-blue-500"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">
+                    Digite o CEP e saia do campo para preencher o endereço automaticamente.
+                  </p>
+                </div>
                 <div className="md:col-span-2">
                   {campo("Endereço", "endereco", "Rua, número, bairro, cidade, UF")}
                 </div>
