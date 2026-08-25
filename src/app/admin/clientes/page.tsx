@@ -88,7 +88,23 @@ export default function AdminClientesPage() {
     setForm((prev) => ({ ...prev, [campo]: valor }));
   }
 
-  function abrirModal() {
+  function abrirModal() {  async function buscarCep(cep: string) {
+    const soNumeros = cep.replace(/\D/g, "");
+    if (soNumeros.length !== 8) return;
+
+    setMensagem(null);
+    const resposta = await fetch(`https://viacep.com.br/ws/${soNumeros}/json/`);
+    const dados = await resposta.json();
+
+    if (dados.erro) {
+      setMensagem({ tipo: "erro", texto: "CEP não encontrado. Preencha o endereço manualmente." });
+      return;
+    }
+
+    const enderecoCompleto = `${dados.logradouro}, ${dados.bairro}, ${dados.localidade}/${dados.uf}`;
+    atualizar("endereco", enderecoCompleto);
+    setMensagem({ tipo: "sucesso", texto: "Endereço preenchido pelo CEP. Confira e adicione o número." });
+  }
     setForm(vazio);
     setMensagem(null);
     setModalAberto(true);
@@ -265,7 +281,20 @@ export default function AdminClientesPage() {
                 {campo("Nome fantasia", "nome_fantasia", "Nome fantasia")}
                 {campo("CNPJ", "cnpj", "00.000.000/0000-00")}
                 {campo("Inscrição estadual", "inscricao_estadual", "Inscrição estadual")}
-                {campo("CEP", "cep", "00000-000")}
+                                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1">CEP</label>
+                  <input
+                    type="text"
+                    placeholder="00000-000"
+                    value={form.cep}
+                    onChange={(e) => atualizar("cep", e.target.value)}
+                    onBlur={(e) => buscarCep(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 outline-none focus:border-blue-500"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">
+                    Digite o CEP e saia do campo para preencher o endereço automaticamente.
+                  </p>
+                </div>
                 <div className="md:col-span-2">
                   {campo("Endereço", "endereco", "Rua, número, bairro, cidade, UF")}
                 </div>
