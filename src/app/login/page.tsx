@@ -1,17 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import type { FormEvent } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
 
-  async function entrar(e: React.FormEvent) {
+  const [supEmail, setSupEmail] = useState("");
+  const [supSenha, setSupSenha] = useState("");
+  const [supErro, setSupErro] = useState("");
+  const [supCarregando, setSupCarregando] = useState(false);
+
+  async function entrarCliente(e: FormEvent) {
     e.preventDefault();
     setCarregando(true);
     setErro("");
@@ -30,10 +37,42 @@ export default function LoginPage() {
     router.push("/dashboard");
   }
 
+  async function entrarSuporte(e: FormEvent) {
+    e.preventDefault();
+    setSupCarregando(true);
+    setSupErro("");
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: supEmail,
+      password: supSenha,
+    });
+
+    if (error || !data.user?.email) {
+      setSupErro("E-mail ou senha incorretos.");
+      setSupCarregando(false);
+      return;
+    }
+
+    const { data: adm } = await supabase
+      .from("administradores")
+      .select("id")
+      .eq("email", data.user.email)
+      .maybeSingle();
+
+    if (!adm) {
+      await supabase.auth.signOut();
+      setSupErro("Acesso restrito ao suporte Solutec.");
+      setSupCarregando(false);
+      return;
+    }
+
+    router.push("/admin/clientes");
+  }
+
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-100">
+    <main className="min-h-screen flex items-center justify-center bg-slate-100 p-4 relative">
       <form
-        onSubmit={entrar}
+        onSubmit={entrarCliente}
         className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-sm"
       >
         <h1 className="text-2xl font-bold text-center mb-6 text-slate-800">
@@ -79,11 +118,52 @@ export default function LoginPage() {
         </button>
       </form>
 
-      <p className="text-center mt-4 text-sm text-slate-400">
-        <a href="/admin/login" className="hover:text-slate-600 underline">
-          Acesso do suporte Solutec
-        </a>
-      </p>
+      <form
+        onSubmit={entrarSuporte}
+        className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-xs fixed bottom-4 right-4"
+      >
+        <h2 className="text-sm font-bold text-slate-800 mb-3">
+          Acesso do Suporte Solutec
+        </h2>
+
+        {supErro && (
+          <div className="mb-3 rounded-xl px-3 py-2 text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+            {supErro}
+          </div>
+        )}
+
+        <label className="block text-xs font-medium text-slate-600 mb-1">
+          E-mail
+        </label>
+        <input
+          type="email"
+          placeholder="E-mail"
+          value={supEmail}
+          onChange={(e) => setSupEmail(e.target.value)}
+          className="w-full border rounded-lg px-3 py-2 mb-2 outline-none focus:border-blue-500 text-sm"
+          required
+        />
+
+        <label className="block text-xs font-medium text-slate-600 mb-1">
+          Senha
+        </label>
+        <input
+          type="password"
+          placeholder="Senha"
+          value={supSenha}
+          onChange={(e) => setSupSenha(e.target.value)}
+          className="w-full border rounded-lg px-3 py-2 mb-3 outline-none focus:border-blue-500 text-sm"
+          required
+        />
+
+        <button
+          type="submit"
+          disabled={supCarregando}
+          className="w-full bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white font-semibold rounded-xl py-2.5 text-sm transition"
+        >
+          {supCarregando ? "Entrando..." : "Acessar Painel"}
+        </button>
+      </form>
     </main>
   );
 }
