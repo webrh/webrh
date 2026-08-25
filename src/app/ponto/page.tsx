@@ -81,7 +81,14 @@ export default function PontoPage() {
     const agora = new Date();
     const hora = agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     setMensagem({ tipo: "sucesso", texto: `Marcação de ${tipo} confirmada para ${funcionario.nome} às ${hora}!` });
-    carregarMarcacoes(funcionario.id);
+
+    // Reseta a tela após 2 segundos para o próximo funcionário
+    setTimeout(() => {
+      setCpf("");
+      setFuncionario(null);
+      setMensagem(null);
+      setMarcacoesHoje([]);
+    }, 2000);
   }
 
   return (
