@@ -84,11 +84,18 @@ export default function AdminClientesPage() {
         : "Acesso bloqueado para " + cliente.nome + ".",
     });
     carregar();
-  }  function atualizar(campo: string, valor: string) {
+  }
+
+  function atualizar(campo: string, valor: string) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
   }
 
-  function abrirModal() { 
+  function abrirModal() {
+    setForm(vazio);
+    setMensagem(null);
+    setModalAberto(true);
+  }
+
   async function buscarCep(cep: string) {
     const soNumeros = cep.replace(/\D/g, "");
     if (soNumeros.length !== 8) return;
@@ -105,26 +112,6 @@ export default function AdminClientesPage() {
     const enderecoCompleto = `${dados.logradouro}, ${dados.bairro}, ${dados.localidade}/${dados.uf}`;
     atualizar("endereco", enderecoCompleto);
     setMensagem({ tipo: "sucesso", texto: "Endereço preenchido pelo CEP. Confira e adicione o número." });
-  } async function buscarCep(cep: string) {
-    const soNumeros = cep.replace(/\D/g, "");
-    if (soNumeros.length !== 8) return;
-
-    setMensagem(null);
-    const resposta = await fetch(`https://viacep.com.br/ws/${soNumeros}/json/`);
-    const dados = await resposta.json();
-
-    if (dados.erro) {
-      setMensagem({ tipo: "erro", texto: "CEP não encontrado. Preencha o endereço manualmente." });
-      return;
-    }
-
-    const enderecoCompleto = `${dados.logradouro}, ${dados.bairro}, ${dados.localidade}/${dados.uf}`;
-    atualizar("endereco", enderecoCompleto);
-    setMensagem({ tipo: "sucesso", texto: "Endereço preenchido pelo CEP. Confira e adicione o número." });
-  }
-    setForm(vazio);
-    setMensagem(null);
-    setModalAberto(true);
   }
 
   async function salvar(e: FormEvent) {
@@ -205,7 +192,9 @@ export default function AdminClientesPage() {
         </main>
       </div>
     );
-  }  return (
+  }
+
+  return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar />
       <main className="flex-1 p-8">
@@ -298,7 +287,7 @@ export default function AdminClientesPage() {
                 {campo("Nome fantasia", "nome_fantasia", "Nome fantasia")}
                 {campo("CNPJ", "cnpj", "00.000.000/0000-00")}
                 {campo("Inscrição estadual", "inscricao_estadual", "Inscrição estadual")}
-                                <div>
+                <div>
                   <label className="block text-sm font-medium text-slate-600 mb-1">CEP</label>
                   <input
                     type="text"
