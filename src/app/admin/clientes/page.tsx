@@ -5,16 +5,21 @@ import type { FormEvent } from "react";
 import { supabase } from "@/lib/supabase";
 import Sidebar from "@/components/Sidebar";
 
-type Cliente = {
+type Empresa = {
   id: string;
   nome: string;
+  razao_social: string | null;
+  nome_fantasia: string | null;
   cnpj: string | null;
+  cpf: string | null;
   inscricao_estadual: string | null;
+  endereco: string | null;
+  cep: string | null;
+  codigo: string | null;
   nome_responsavel: string | null;
+  cpf_responsavel: string | null;
   email_contato: string | null;
   email_login: string | null;
-  ativo: boolean;
-  criado_em: string;
 };
 
 const vazio = {
@@ -22,29 +27,32 @@ const vazio = {
   razao_social: "",
   nome_fantasia: "",
   cnpj: "",
+  cpf: "",
   inscricao_estadual: "",
   endereco: "",
   cep: "",
+  codigo: "",
   nome_responsavel: "",
   cpf_responsavel: "",
   email_contato: "",
-  email_login: "",
-  senha: "",
 };
 
-export default function AdminClientesPage() {
-  const [admin, setAdmin] = useState<boolean | null>(null);
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [form, setForm] = useState(vazio);
+export default function EmpresasPage() {
+  const [admin, setAdmin] = useState(false);
+  const [carregando, setCarregando] = useState(true);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [modalAberto, setModalAberto] = useState(false);
-  const [carregando, setCarregando] = useState(false);
+  const [editando, setEditando] = useState<Empresa | null>(null);
+  const [form, setForm] = useState(vazio);
+  const [salvando, setSalvando] = useState(false);
   const [mensagem, setMensagem] = useState<{ tipo: "sucesso" | "erro"; texto: string } | null>(null);
 
   useEffect(() => {
-    carregar();
+    carregarEmpresas();
   }, []);
 
-  async function carregar() {
+  async function carregarEmpresas() {
+    setCarregando(true);
     const { data: { user } } = await supabase.auth.getUser();
     const email = user?.email ?? "";
 
@@ -53,45 +61,37 @@ export default function AdminClientesPage() {
       .select("id")
       .eq("email", email)
       .maybeSingle();
+    const ehAdmin = !!adm;
+    setAdmin(ehAdmin);
 
-    setAdmin(!!adm);
-
-    if (adm) {
-      const { data: lista } = await supabase
-        .from("empresas")
-        .select("id, nome, cnpj, inscricao_estadual, nome_responsavel, email_contato, email_login, ativo, criado_em")
-        .order("nome");
-      setClientes(lista ?? []);
+    let data: Empresa[] | null = null;
+    if (ehAdmin) {
+      const res = await supabase.from("empresas").select("*").order("nome");
+      data = res.data;
+    } else {
+      const res = await supabase.from("empresas").select("*").eq("email_login", email);
+      data = res.data;
     }
+    setEmpresas(data ?? []);
+    setCarregando(false);
   }
 
-  async function alternarStatus(cliente: Cliente) {
-    const novoStatus = !cliente.ativo;
-    const { error } = await supabase
-      .from("empresas")
-      .update({ ativo: novoStatus })
-      .eq("id", cliente.id);
-
-    if (error) {
-      setMensagem({ tipo: "erro", texto: "Erro ao atualizar: " + error.message });
-      return;
-    }
-
-    setMensagem({
-      tipo: "sucesso",
-      texto: novoStatus
-        ? "Acesso liberado para " + cliente.nome + "."
-        : "Acesso bloqueado para " + cliente.nome + ".",
+  function abrirEdicao(emp: Empresa) {
+    setEditando(emp);
+    setForm({
+      nome: emp.nome ?? "",
+      razao_social: emp.razao_social ?? "",
+      nome_fantasia: emp.nome_fantasia ?? "",
+      cnpj: emp.cnpj ?? "",
+      cpf: emp.cpf ?? "",
+      inscricao_estadual: emp.inscricao_estadual ?? "",
+      endereco: emp.endereco ?? "",
+      cep: emp.cep ?? "",
+      codigo: emp.codigo ?? "",
+      nome_responsavel: emp.nome_responsavel ?? "",
+      cpf_responsavel: emp.cpf_responsavel ?? "",
+      email_contato: emp.email_contato ?? "",
     });
-    carregar();
-  }
-
-  function atualizar(campo: string, valor: string) {
-    setForm((prev) => ({ ...prev, [campo]: valor }));
-  }
-
-  function abrirModal() {
-    setForm(vazio);
     setMensagem(null);
     setModalAberto(true);
   }
@@ -114,49 +114,44 @@ export default function AdminClientesPage() {
     setMensagem({ tipo: "sucesso", texto: "Endereço preenchido pelo CEP. Confira e adicione o número." });
   }
 
+  function atualizar(campo: string, valor: string) {
+    setForm((prev) => ({ ...prev, [campo]: valor }));
+  }
+
   async function salvar(e: FormEvent) {
     e.preventDefault();
-    setCarregando(true);
+    if (!editando) return;
+    setSalvando(true);
     setMensagem(null);
 
-    const emailLogin = form.email_login.trim().toLowerCase();
-
-    const { data: { session } } = await supabase.auth.getSession();
-
-    const resposta = await fetch("/api/criar-cliente", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + (session?.access_token ?? ""),
-      },
-      body: JSON.stringify({
-        email: emailLogin,
-        senha: form.senha,
+    const { error } = await supabase
+      .from("empresas")
+      .update({
         nome: form.nome,
-        razao_social: form.razao_social,
-        nome_fantasia: form.nome_fantasia,
-        cnpj: form.cnpj.replace(/\D/g, ""),
-        inscricao_estadual: form.inscricao_estadual,
-        endereco: form.endereco,
-        cep: form.cep.replace(/\D/g, ""),
-        nome_responsavel: form.nome_responsavel,
-        cpf_responsavel: form.cpf_responsavel.replace(/\D/g, ""),
-        email_contato: form.email_contato,
-      }),
-    });
+        razao_social: form.razao_social || null,
+        nome_fantasia: form.nome_fantasia || null,
+        cnpj: form.cnpj.replace(/\D/g, "") || null,
+        cpf: form.cpf.replace(/\D/g, "") || null,
+        inscricao_estadual: form.inscricao_estadual || null,
+        endereco: form.endereco || null,
+        cep: form.cep.replace(/\D/g, "") || null,
+        codigo: form.codigo || null,
+        nome_responsavel: form.nome_responsavel || null,
+        cpf_responsavel: form.cpf_responsavel.replace(/\D/g, "") || null,
+        email_contato: form.email_contato || null,
+      })
+      .eq("id", editando.id);
 
-    const resultado = await resposta.json();
-    setCarregando(false);
+    setSalvando(false);
 
-    if (!resposta.ok || !resultado.ok) {
-      setMensagem({ tipo: "erro", texto: resultado.erro || "Erro ao criar cliente." });
+    if (error) {
+      setMensagem({ tipo: "erro", texto: "Erro ao salvar: " + error.message });
       return;
     }
 
-    setMensagem({ tipo: "sucesso", texto: "Cliente criado! Login: " + emailLogin });
+    setMensagem({ tipo: "sucesso", texto: "Empresa atualizada com sucesso!" });
     setModalAberto(false);
-    setForm(vazio);
-    carregar();
+    carregarEmpresas();
   }
 
   const campo = (label: string, chave: string, placeholder = "", tipo = "text") => (
@@ -172,43 +167,20 @@ export default function AdminClientesPage() {
     </div>
   );
 
-  if (admin === null) {
-    return (
-      <div className="flex min-h-screen bg-slate-50">
-        <Sidebar />
-        <main className="flex-1 p-8">Carregando...</main>
-      </div>
-    );
-  }
-
-  if (!admin) {
-    return (
-      <div className="flex min-h-screen bg-slate-50">
-        <Sidebar />
-        <main className="flex-1 p-8">
-          <div className="bg-white rounded-2xl shadow p-8 text-center text-slate-500">
-            Acesso restrito ao suporte Solutec.
-          </div>
-        </main>
-      </div>
-    );
-  }
-
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar />
       <main className="flex-1 p-8">
         <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">Clientes (Solutec)</h1>
-            <p className="text-sm text-slate-500">Cadastre a empresa e crie o acesso do cliente</p>
-          </div>
-          <button
-            onClick={abrirModal}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl px-5 py-2.5 transition"
-          >
-            + Cadastrar Cliente
-          </button>
+          <h1 className="text-2xl font-bold text-slate-800">Empresas</h1>
+          {admin && (
+            <a
+              href="/admin/clientes"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl px-5 py-2.5 transition"
+            >
+              Cadastrar Nova Empresa
+            </a>
+          )}
         </div>
 
         {mensagem && (
@@ -221,51 +193,43 @@ export default function AdminClientesPage() {
           </div>
         )}
 
-        {clientes.length === 0 ? (
+        {carregando ? (
+          <div className="bg-white rounded-2xl shadow p-8 text-center text-slate-500">Carregando...</div>
+        ) : empresas.length === 0 ? (
           <div className="bg-white rounded-2xl shadow p-8 text-center text-slate-500">
-            Nenhum cliente cadastrado ainda.
+            {admin
+              ? "Nenhuma empresa cadastrada ainda."
+              : "Sua empresa ainda não foi configurada. Entre em contato com o suporte Solutec."}
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-slate-100 text-slate-600">
                 <tr>
-                  <th className="text-left px-4 py-3">Empresa</th>
+                  <th className="text-left px-4 py-3">Nome</th>
                   <th className="text-left px-4 py-3">CNPJ</th>
                   <th className="text-left px-4 py-3">Responsável</th>
-                  <th className="text-left px-4 py-3">Login</th>
-                  <th className="text-left px-4 py-3">Status</th>
-                  <th className="text-left px-4 py-3">Ações</th>
+                  <th className="text-left px-4 py-3">Contato</th>
+                  {admin && <th className="text-left px-4 py-3">Ações</th>}
                 </tr>
               </thead>
               <tbody>
-                {clientes.map((c) => (
-                  <tr key={c.id} className="border-t border-slate-100">
-                    <td className="px-4 py-3 font-medium text-slate-800">{c.nome}</td>
-                    <td className="px-4 py-3 text-slate-600">{c.cnpj || "-"}</td>
-                    <td className="px-4 py-3 text-slate-600">{c.nome_responsavel || "-"}</td>
-                    <td className="px-4 py-3 text-slate-600 font-mono text-xs">{c.email_login || "-"}</td>
-                    <td className="px-4 py-3">
-                      <span className={`rounded-full px-3 py-1 text-xs font-medium ${
-                        c.ativo
-                          ? "bg-green-50 text-green-700"
-                          : "bg-red-50 text-red-700"
-                      }`}>
-                        {c.ativo ? "Ativo" : "Bloqueado"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => alternarStatus(c)}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                          c.ativo
-                            ? "bg-red-50 text-red-700 hover:bg-red-100"
-                            : "bg-green-50 text-green-700 hover:bg-green-100"
-                        }`}
-                      >
-                        {c.ativo ? "Bloquear" : "Desbloquear"}
-                      </button>
-                    </td>
+                {empresas.map((emp) => (
+                  <tr key={emp.id} className="border-t border-slate-100">
+                    <td className="px-4 py-3 font-medium text-slate-800">{emp.nome}</td>
+                    <td className="px-4 py-3 text-slate-600">{emp.cnpj || "-"}</td>
+                    <td className="px-4 py-3 text-slate-600">{emp.nome_responsavel || "-"}</td>
+                    <td className="px-4 py-3 text-slate-600">{emp.email_contato || "-"}</td>
+                    {admin && (
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => abrirEdicao(emp)}
+                          className="text-blue-600 hover:text-blue-800 font-medium text-xs bg-blue-50 hover:bg-blue-100 rounded-lg px-3 py-1.5 transition"
+                        >
+                          ✏️ Editar
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -273,12 +237,21 @@ export default function AdminClientesPage() {
           </div>
         )}
 
-        {modalAberto && (
+        {modalAberto && editando && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <form onSubmit={salvar} className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-8">
+            <form
+              onSubmit={salvar}
+              className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-8"
+            >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-slate-800">Cadastrar Cliente</h2>
-                <button type="button" onClick={() => setModalAberto(false)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
+                <h2 className="text-xl font-bold text-slate-800">Editar Empresa</h2>
+                <button
+                  type="button"
+                  onClick={() => setModalAberto(false)}
+                  className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
+                >
+                  ×
+                </button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -286,6 +259,8 @@ export default function AdminClientesPage() {
                 {campo("Razão social", "razao_social", "Razão social")}
                 {campo("Nome fantasia", "nome_fantasia", "Nome fantasia")}
                 {campo("CNPJ", "cnpj", "00.000.000/0000-00")}
+                {campo("CPF", "cpf", "000.000.000-00")}
+                {campo("Código", "codigo", "Código da empresa")}
                 {campo("Inscrição estadual", "inscricao_estadual", "Inscrição estadual")}
                 <div>
                   <label className="block text-sm font-medium text-slate-600 mb-1">CEP</label>
@@ -304,18 +279,19 @@ export default function AdminClientesPage() {
                 <div className="md:col-span-2">
                   {campo("Endereço", "endereco", "Rua, número, bairro, cidade, UF")}
                 </div>
-                {campo("Nome do responsável", "nome_responsavel", "Nome do colaborador responsável")}
+                {campo("Nome do responsável", "nome_responsavel", "Nome do responsável")}
                 {campo("CPF do responsável", "cpf_responsavel", "000.000.000-00")}
-                {campo("E-mail de contato", "email_contato", "contato@empresa.com.br")}
-                <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
-                  <p className="text-sm font-semibold text-slate-700 mb-3">Acesso do cliente à plataforma</p>
+                <div className="md:col-span-2">
+                  {campo("E-mail de contato", "email_contato", "contato@empresa.com.br")}
                 </div>
-                {campo("Login (e-mail de acesso)", "email_login", "acesso@empresa.com.br")}
-                {campo("Senha", "senha", "Senha inicial")}
               </div>
 
-              <button type="submit" disabled={carregando} className="mt-6 w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-xl py-3 transition">
-                {carregando ? "Criando..." : "Criar Cliente e Acesso"}
+              <button
+                type="submit"
+                disabled={salvando}
+                className="mt-6 w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-xl py-3 transition"
+              >
+                {salvando ? "Salvando..." : "Salvar Alterações"}
               </button>
             </form>
           </div>
