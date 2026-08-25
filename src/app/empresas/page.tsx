@@ -94,9 +94,7 @@ export default function EmpresasPage() {
     });
     setMensagem(null);
     setModalAberto(true);
-  }
-
-  async function buscarCep(cep: string) {
+  } async function buscarCep(cep: string) {
     const soNumeros = cep.replace(/\D/g, "");
     if (soNumeros.length !== 8) return;
 
@@ -154,7 +152,7 @@ export default function EmpresasPage() {
     carregarEmpresas();
   }
 
- const campo = (label: string, chave: string, placeholder = "", tipo = "text") => (
+  const campo = (label: string, chave: string, placeholder = "", tipo = "text") => (
     <div>
       <label className="block text-sm font-medium text-slate-600 mb-1">{label}</label>
       <input
@@ -165,9 +163,7 @@ export default function EmpresasPage() {
         className="w-full border rounded-lg px-3 py-2 outline-none focus:border-blue-500"
       />
     </div>
-  );
-
-  return (
+  ); return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar />
       <main className="flex-1 p-8">
