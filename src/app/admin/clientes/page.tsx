@@ -13,6 +13,7 @@ type Cliente = {
   nome_responsavel: string | null;
   email_contato: string | null;
   email_login: string | null;
+  ativo: boolean;
   criado_em: string;
 };
 
@@ -58,13 +59,32 @@ export default function AdminClientesPage() {
     if (adm) {
       const { data: lista } = await supabase
         .from("empresas")
-        .select("id, nome, cnpj, inscricao_estadual, nome_responsavel, email_contato, email_login, criado_em")
+        .select("id, nome, cnpj, inscricao_estadual, nome_responsavel, email_contato, email_login, ativo, criado_em")
         .order("nome");
       setClientes(lista ?? []);
     }
   }
 
-  function atualizar(campo: string, valor: string) {
+  async function alternarStatus(cliente: Cliente) {
+    const novoStatus = !cliente.ativo;
+    const { error } = await supabase
+      .from("empresas")
+      .update({ ativo: novoStatus })
+      .eq("id", cliente.id);
+
+    if (error) {
+      setMensagem({ tipo: "erro", texto: "Erro ao atualizar: " + error.message });
+      return;
+    }
+
+    setMensagem({
+      tipo: "sucesso",
+      texto: novoStatus
+        ? "Acesso liberado para " + cliente.nome + "."
+        : "Acesso bloqueado para " + cliente.nome + ".",
+    });
+    carregar();
+  }  function atualizar(campo: string, valor: string) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
   }
 
@@ -152,9 +172,7 @@ export default function AdminClientesPage() {
         </main>
       </div>
     );
-  }
-
-  return (
+  }  return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar />
       <main className="flex-1 p-8">
@@ -194,6 +212,8 @@ export default function AdminClientesPage() {
                   <th className="text-left px-4 py-3">CNPJ</th>
                   <th className="text-left px-4 py-3">Responsável</th>
                   <th className="text-left px-4 py-3">Login</th>
+                  <th className="text-left px-4 py-3">Status</th>
+                  <th className="text-left px-4 py-3">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -203,6 +223,27 @@ export default function AdminClientesPage() {
                     <td className="px-4 py-3 text-slate-600">{c.cnpj || "-"}</td>
                     <td className="px-4 py-3 text-slate-600">{c.nome_responsavel || "-"}</td>
                     <td className="px-4 py-3 text-slate-600 font-mono text-xs">{c.email_login || "-"}</td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded-full px-3 py-1 text-xs font-medium ${
+                        c.ativo
+                          ? "bg-green-50 text-green-700"
+                          : "bg-red-50 text-red-700"
+                      }`}>
+                        {c.ativo ? "Ativo" : "Bloqueado"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => alternarStatus(c)}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                          c.ativo
+                            ? "bg-red-50 text-red-700 hover:bg-red-100"
+                            : "bg-green-50 text-green-700 hover:bg-green-100"
+                        }`}
+                      >
+                        {c.ativo ? "Bloquear" : "Desbloquear"}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
