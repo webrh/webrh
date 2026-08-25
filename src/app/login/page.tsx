@@ -18,18 +18,31 @@ export default function LoginPage() {
   const [supErro, setSupErro] = useState("");
   const [supCarregando, setSupCarregando] = useState(false);
 
-  async function entrarCliente(e: FormEvent) {
+    async function entrarCliente(e: FormEvent) {
     e.preventDefault();
     setCarregando(true);
     setErro("");
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password: senha,
     });
 
-    if (error) {
+    if (error || !data.user?.email) {
       setErro("E-mail ou senha incorretos.");
+      setCarregando(false);
+      return;
+    }
+
+    const { data: empresa } = await supabase
+      .from("empresas")
+      .select("ativo")
+      .eq("email_login", data.user.email)
+      .maybeSingle();
+
+    if (empresa && empresa.ativo === false) {
+      await supabase.auth.signOut();
+      setErro("Acesso bloqueado. Entre em contato com a Solutec.");
       setCarregando(false);
       return;
     }
