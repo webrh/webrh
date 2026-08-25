@@ -35,7 +35,19 @@ export default function DashboardPage() {
   const [pendencias, setPendencias] = useState<Pendencia[]>([]);
 
   useEffect(() => {
-    async function carregarDados() {      const { count: totalFunc } = await supabase
+    async function carregarDados() {       const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        const { data: empresa } = await supabase
+          .from("empresas")
+          .select("ativo")
+          .eq("email_login", user.email)
+          .maybeSingle();
+        if (empresa && empresa.ativo === false) {
+          await supabase.auth.signOut();
+          window.location.href = "/login";
+          return;
+        }
+      }     const { count: totalFunc } = await supabase
         .from("funcionarios")
         .select("*", { count: "exact", head: true })
         .eq("ativo", true);
